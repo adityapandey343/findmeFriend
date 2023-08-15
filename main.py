@@ -8,6 +8,8 @@ from PIL import Image
 import os
 from firebase_admin import credentials, storage, initialize_app
 
+
+# Initializing firebase app if not done yet.
 cred = credentials.Certificate("key.json")
 try:
     app = initialize_app(cred, { 'storageBucket':'findfriend-bc6c4.appspot.com' })
@@ -17,40 +19,10 @@ except:
 
 def header(url):
     st.markdown(f'<p style="color:#ffffff;font-size:60px;;">{url}</p>',unsafe_allow_html=True)
-
 header("Find Me A Friend")
 
 with open( "css\style.css" ) as css:
     st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
-
-
-
-def display_friends(no_of_row, no_of_col):
-    rows = no_of_row
-    col = no_of_col
-    for row in range(rows):
-        for i, j in enumerate(st.columns(col)):
-            with j:
-                st.markdown(f" **:green[{name_list[i + (row * col)]}]** ")
-                # display_img(f"{phn_list[i + (row * col)]}")
-                get_image_from_firebase_and_display(f"{phn_list[i + (row * col)]}")
-                st.markdown(f" **:blue[Phone: ]** {phn_list[i + (row * col)]}")
-                st.markdown(f" **:blue[Age: ]** {age_list[i + (row * col)]}")
-                st.markdown(f" **:blue[City: ]** {city_list[i + (row * col)]}")
-                st.markdown(f" **:blue[Hobbies: ]** {hobby_list[i + (row * col)]}")
-                st.markdown(f" **:blue[Description: ]** {desc_list[i + (row * col)]}")
-                st.markdown(f" **:blue[Aim: ]** {aim_list[i + (row * col)]}")
-
-def save_img(picture):
-    bytes_data = picture.getvalue()
-    img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
-    im_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    Image.fromarray(im_rgb).save(f'new_images/{phn}.jpg')
-
-def display_img(phn):
-    image = Image.open(f'new_images/{phn}.jpg')
-    st.image(image)
-
 
 def upload_img_to_firebase(picture):
     bytes_data = picture.getvalue()
@@ -74,7 +46,23 @@ def get_image_from_firebase_and_display(phn):
     st.image(image)
 
 
-def recommend(person):
+
+def display_friends(no_of_row, no_of_col):
+    rows = no_of_row
+    col = no_of_col
+    for row in range(rows):
+        for i, j in enumerate(st.columns(col)):
+            with j:
+                st.markdown(f" **:green[{name_list[i + (row * col)]}]** ")
+                get_image_from_firebase_and_display(f"{phn_list[i + (row * col)]}")
+                st.markdown(f" **:blue[Phone: ]** {phn_list[i + (row * col)]}")
+                st.markdown(f" **:blue[Age: ]** {age_list[i + (row * col)]}")
+                st.markdown(f" **:blue[City: ]** {city_list[i + (row * col)]}")
+                st.markdown(f" **:blue[Hobbies: ]** {hobby_list[i + (row * col)]}")
+                st.markdown(f" **:blue[Description: ]** {desc_list[i + (row * col)]}")
+                st.markdown(f" **:blue[Aim: ]** {aim_list[i + (row * col)]}")
+
+def recommend(person): #Funtion which give recommendations on the basis of similarity index. It returns 7 lists with 7 features of recommendations.
     name_list = []
     phn_list = []
     age_list = []
@@ -98,10 +86,11 @@ def recommend(person):
     return name_list, phn_list, age_list, city_list, hobby_list, desc_list, aim_list
 
 
-
+# Takiing inputs
 picture = st.camera_input("")
 name = st.text_input('Name', '')
 phn = st.text_input('Phone number', '')
+phn = phn.replace(" ","")
 age = st.slider('Age', min_value=0, max_value=100, value=0, step = 1)
 city = st.text_input('City', '')
 hobby = st.text_input('Hobbies / Interests', '')
@@ -109,7 +98,7 @@ desc = st.text_input('Describe yourself', '')
 aim = st.text_input('Goals of life', '')
 agree = st.checkbox('Should I add your details to our database ?')
 
-phn = phn.replace(" ","")
+
 
 
 
@@ -118,22 +107,16 @@ if st.button("Find Friends") and age!=0 and name != "" and phn != "" and city !=
     client = MongoClient("mongodb+srv://aditya123:6AUedsUnVL7QHiJ@cluster0.rghxolj.mongodb.net/")
     db = client['friends_db']
     collection = db["friends_collection"]
-    friend_list = list(collection.find())
 
 
-    if agree and len(list(collection.find({"Phone": phn}))) > 0:
-        myquery = {"Phone": phn}
-        collection.delete_one(myquery)
+    if agree:
+        if len(list(collection.find({"Phone": phn}))) > 0:
+            myquery = {"Phone": phn}
+            collection.delete_one(myquery) #Deleting document of the user, if existed before, from databse.
+
         dict = {'Name': name, 'Phone': phn, 'Age': age, 'City': city, 'Hobby': hobby, 'Description': desc, 'Aim': aim}
-        collection.insert_one(dict)
-        # save_img(picture)
-        upload_img_to_firebase(picture)
-
-    if agree and len(list(collection.find({"Phone": phn}))) == 0:
-        dict = {'Name': name, 'Phone': phn, 'Age': age, 'City': city, 'Hobby': hobby, 'Description': desc, 'Aim': aim}
-        collection.insert_one(dict)
-        # save_img(picture)
-        upload_img_to_firebase(picture)
+        collection.insert_one(dict) #Entering new fresh document in mongoDB.
+        upload_img_to_firebase(picture) #Uploading image to firebase - duplication is automatically managed.
 
 
 
@@ -143,39 +126,32 @@ if st.button("Find Friends") and age!=0 and name != "" and phn != "" and city !=
 
     # entering new entry in dataframe
     if len(list(collection.find({"Phone": phn}))) == 0:
-        tags = preprocessing.pipeline(age, city, hobby, desc, aim)
+        tags = preprocessing.pipeline(city, hobby, desc, aim)
         df.loc[len(df.index)] = [name, phn, age, city, hobby, desc, aim, tags]
 
 
-    # inserting entries from database into dataframe
+    friend_list = list(collection.find())  # Extracting data from database
+    # inserting entries from mongoDB database into dataframe
     for i in friend_list:
-        tags = preprocessing.pipeline(i['Age'], i['City'], i['Hobby'], i['Description'], i['Aim'])
+        tags = preprocessing.pipeline(i['City'], i['Hobby'], i['Description'], i['Aim']) # Using preprocessing module
         df.loc[len(df.index)] = [i['Name'], i['Phone'], i['Age'], i['City'], i['Hobby'], i['Description'], i['Aim'], tags]
 
 
-
+    # Vectorization of tags
     from sklearn.feature_extraction.text import CountVectorizer
     cv = CountVectorizer(max_features=5000, stop_words='english')
     vectors = cv.fit_transform(df['Tags']).toarray()
 
 
-
+    # Creating Similarity Index
     from sklearn.metrics.pairwise import cosine_similarity
     similarity = cosine_similarity(vectors)
 
-
-
-
-
-
+    # Recommending Friends on the basis of similarity index
     name_list, phn_list, age_list, city_list, hobby_list, desc_list, aim_list = recommend(name)
+
+    # Displaying recommendations using display_friends(no_of_rows, no_of_cols) function
     display_friends(4,2)
-
-
-
-
-
-
 
 
 else:
