@@ -2,7 +2,7 @@ from pymongo import MongoClient
 import json
 import streamlit as st
 
-client = MongoClient("mongodb://localhost:27017/")
+client = MongoClient("mongodb+srv://aditya123:6AUedsUnVL7QHiJ@cluster0.rghxolj.mongodb.net/")
 
 db = client['friends_db']
 collection = db["friends_collection"]
