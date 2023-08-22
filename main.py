@@ -115,9 +115,7 @@ phn = phn.replace(" ","")
 
 
 if st.button("Find Friends") and age!=0 and name != "" and phn != "" and city != "" and hobby != "" and desc != "" and aim != "" and picture is not None:
-    import certifi
-    ca = certifi.where()
-    client = MongoClient("mongodb+srv://aditya123:6AUedsUnVL7QHiJ@cluster0.rghxolj.mongodb.net/xyzdb?retryWrites=true&w=majority", tlsCAFile=ca)
+    client = MongoClient("mongodb+srv://aditya123:6AUedsUnVL7QHiJ@cluster0.rghxolj.mongodb.net/" , tls = True, tlsAllowInvalidCertificates = True)
     db = client['friends_db']
     collection = db["friends_collection"]
 
