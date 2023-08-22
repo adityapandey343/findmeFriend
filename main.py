@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 import os
 from firebase_admin import credentials, storage, initialize_app
+import certifi
 
 cred = credentials.Certificate("key.json")
 try:
@@ -115,7 +116,7 @@ phn = phn.replace(" ","")
 
 
 if st.button("Find Friends") and age!=0 and name != "" and phn != "" and city != "" and hobby != "" and desc != "" and aim != "" and picture is not None:
-    client = MongoClient("mongodb+srv://aditya123:6AUedsUnVL7QHiJ@cluster0.rghxolj.mongodb.net/" , tls = True, tlsAllowInvalidCertificates = True)
+    client = MongoClient("mongodb+srv://aditya123:6AUedsUnVL7QHiJ@cluster0.rghxolj.mongodb.net/" , tlsCAFile=certifi.where())
     db = client['friends_db']
     collection = db["friends_collection"]
 
